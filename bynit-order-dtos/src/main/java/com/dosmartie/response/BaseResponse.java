@@ -1,15 +1,17 @@
 package com.dosmartie.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.ToString;
+
 
 @Data
 @AllArgsConstructor
-@ToString
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BaseResponse<T> {
-    private T data;
-    private Integer statusCode;
+    private String result;
     private String errorDesc;
     private boolean success;
+    private int statusCode;
+    private T data;
 }

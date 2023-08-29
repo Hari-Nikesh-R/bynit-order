@@ -7,9 +7,8 @@ import lombok.Data;
 
 @Data
 public class PurchaseRequest {
-    @NotNull(message = "productName must not be null")
-    @Pattern(regexp = "^[a-zA-Z_ ]*$", message = "Invalid ProductName")
-    private String productName;
+    @NotNull(message = "itemSku must not be null")
+    private String sku;
     @NotNull(message = "Quantity must not be null")
     @Positive(message = "Quantity must not be negative or zero")
     private Integer quantity;

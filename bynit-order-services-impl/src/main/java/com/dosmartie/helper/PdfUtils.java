@@ -31,21 +31,26 @@ public class PdfUtils {
             document.add(new Phrase("\n"));
             document.add(new Phrase("Date: " + ((fileName.length > 1) ? fileName[1] : calendar.get(Calendar.DATE) + "-" + calendar.get(Calendar.MONTH) + "-" + calendar.get(Calendar.YEAR))));
             document.add(new Phrase("\n"));
-
-            PdfPTable table = new PdfPTable(4);
+            PdfPTable table = new PdfPTable(7);
             table.setWidthPercentage(100);
             table.addCell("Customer");
             table.addCell("Product Name");
+            table.addCell("Brand");
             table.addCell("Quantity");
             table.addCell("Price");
+            table.addCell("Color");
+            table.addCell("Size");
             AtomicReference<Double> totalPrice = new AtomicReference<>(0.0);
             billResponses.forEach(billResponse -> {
                 billResponse.getAvailableProduct().forEach(productResponse -> {
                     table.addCell(billResponse.getOrderedCustomerDetail().getName());
-                    table.addCell(productResponse.getProductName());
+                    table.addCell(productResponse.getName());
+                    table.addCell(productResponse.getBrand());
                     table.addCell(productResponse.getQuantity().toString());
-                    table.addCell(productResponse.getProductPrice().toString());
-                    totalPrice.updateAndGet(v -> v + productResponse.getProductPrice() * productResponse.getQuantity());
+                    table.addCell(String.valueOf(productResponse.getPrice()));
+                    table.addCell(productResponse.getColor());
+                    table.addCell(productResponse.getSize());
+                    totalPrice.updateAndGet(v -> v + productResponse.getPrice() * productResponse.getQuantity());
                 });
             });
             document.add(new Phrase("\n"));
@@ -74,52 +79,10 @@ public class PdfUtils {
             document.add(new Phrase("\n"));
 
             if (dailyPurchaseBill) {
-                PdfPTable table = new PdfPTable(4);
-                table.setWidthPercentage(100);
-                table.addCell("Customer");
-                table.addCell("Product Name");
-                table.addCell("Quantity");
-                table.addCell("Price");
-                AtomicReference<Double> totalPrice = new AtomicReference<>(0.0);
-                billResponses.forEach(billResponse -> {
-                    billResponse.getAvailableProduct().forEach(productResponse -> {
-                        table.addCell(billResponse.getOrderedCustomerDetail().getName());
-                        table.addCell(productResponse.getProductName());
-                        table.addCell(productResponse.getQuantity().toString());
-                        table.addCell(productResponse.getProductPrice().toString());
-                        totalPrice.updateAndGet(v -> v + productResponse.getProductPrice() * productResponse.getQuantity());
-                    });
-                });
-                document.add(new Phrase("\n"));
-                document.add(table);
-                document.add(new Phrase("\n"));
-                document.add(new Phrase());
+                createTableForPdf(7, billResponses, document);
             }
             else {
-                PdfPTable table = new PdfPTable(3);
-                table.setWidthPercentage(100);
-                table.addCell("Product Name");
-                table.addCell("Quantity");
-                table.addCell("Price");
-                AtomicReference<Double> totalPrice = new AtomicReference<Double>(0.0);
-                billResponses.forEach(billResponse -> {
-                    try {
-                        document.add(new Phrase("Customer: " + billResponse.getOrderedCustomerDetail().getName()));
-                    } catch (DocumentException e) {
-                        throw new RuntimeException(e);
-                    }
-                    billResponse.getAvailableProduct().forEach(productResponse -> {
-                        table.addCell(productResponse.getProductName());
-                        table.addCell(productResponse.getQuantity().toString());
-                        table.addCell("Rs:" + productResponse.getProductPrice().toString());
-                        totalPrice.updateAndGet(v -> v + productResponse.getProductPrice() * productResponse.getQuantity());
-                    });
-                });
-                document.add(new Phrase("\n"));
-                document.add(new Phrase("Total: Rs." + totalPrice.get()));
-                document.add(table);
-                document.add(new Phrase("\n"));
-                document.add(new Phrase());
+                createTableForPdf(6, billResponses, document);
             }
             document.close();
             return outputStream.toByteArray();
@@ -127,5 +90,44 @@ public class PdfUtils {
             exception.printStackTrace();
             return new byte[0];
         }
+    }
+
+    private static void createTableForPdf(int column, List<BillResponse> billResponses, Document document) throws DocumentException {
+        PdfPTable table = new PdfPTable(column);
+        table.setWidthPercentage(100);
+        if (column != 6) {
+            table.addCell("Customer");
+        }
+        table.addCell("Product Name");
+        table.addCell("Brand");
+        table.addCell("Quantity");
+        table.addCell("Price");
+        table.addCell("Color");
+        table.addCell("Size");
+        AtomicReference<Double> totalPrice = new AtomicReference<>(0.0);
+        billResponses.forEach(billResponse -> {
+            if (column == 6) {
+                try {
+                    document.add(new Phrase("Customer: " + billResponse.getOrderedCustomerDetail().getName()));
+                } catch (DocumentException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            billResponse.getAvailableProduct().forEach(productResponse -> {
+                table.addCell(billResponse.getOrderedCustomerDetail().getName());
+                table.addCell(productResponse.getName());
+                table.addCell(productResponse.getBrand());
+                table.addCell(productResponse.getQuantity().toString());
+                table.addCell(String.valueOf(productResponse.getPrice()));
+                table.addCell(productResponse.getColor());
+                table.addCell(productResponse.getSize());
+                totalPrice.updateAndGet(v -> v + productResponse.getPrice() * productResponse.getQuantity());
+            });
+        });
+        document.add(new Phrase("\n"));
+        document.add(new Phrase("Total: Rs." + totalPrice.get()));
+        document.add(table);
+        document.add(new Phrase("\n"));
+        document.add(new Phrase());
     }
 }

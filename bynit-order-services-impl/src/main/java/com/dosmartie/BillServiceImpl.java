@@ -1,6 +1,7 @@
 package com.dosmartie;
 
 import com.dosmartie.helper.PdfUtils;
+import com.dosmartie.helper.ResponseMessage;
 import com.dosmartie.response.BaseResponse;
 import com.dosmartie.response.BillResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,6 +26,8 @@ public class BillServiceImpl implements BillService {
     private OrderHistoryRepository orderHistoryRepository;
     @Autowired
     private ObjectMapper mapper;
+    @Autowired
+    private ResponseMessage<BillResponse> responseMessage;
 
     @Override
     public BaseResponse<BillResponse> generateBill(String email, HttpServletResponse response) {
@@ -36,10 +39,11 @@ public class BillServiceImpl implements BillService {
                 response.setHeader("Content-Disposition", "attachment; filename=" + fileName + "-bill.pdf");
                 List<BillResponse> billResponses = new ArrayList<>();
                 billResponses.add(mapper.convertValue(orderHistory, BillResponse.class));
-                return new BaseResponse<>(mapper.convertValue(optionalOrderHistory.get(), BillResponse.class), HttpStatus.OK.value(), null, PdfUtils.generatePdfAndSave(billResponses, fileName));
-            }).orElseGet(() -> new BaseResponse<>(null, HttpStatus.NO_CONTENT.value(), "No Order found", false));
+                PdfUtils.generatePdfAndSave(billResponses, fileName);
+                return responseMessage.setSuccessResponse("Bill Generated", mapper.convertValue(optionalOrderHistory.get(), BillResponse.class));
+            }).orElseGet(() -> responseMessage.setFailureResponse("No Order found"));
         } catch (Exception exception) {
-            return new BaseResponse<>(null, HttpStatus.OK.value(), exception.getMessage(), false);
+            return responseMessage.setFailureResponse("Bill cannot be generated", exception);
         }
     }
 
@@ -48,7 +52,7 @@ public class BillServiceImpl implements BillService {
         try {
             List<OrderHistory> orderHistories = orderHistoryRepository.findAllByCreatedDate(parseStringToDate(requestDate));
             if (orderHistories.isEmpty()) {
-                return ResponseEntity.ok(new BaseResponse<>(new ArrayList<>(), HttpStatus.NO_CONTENT.value(), "List is empty", false));
+                return ResponseEntity.ok(responseMessage.setFailureResponse("List is empty"));
             } else {
                 String fileName = calendar.get(Calendar.DATE) + "-" + calendar.get(Calendar.MONTH) + "-" + calendar.get(Calendar.YEAR);
                 List<BillResponse> billResponses = mapper.convertValue(orderHistories, new TypeReference<>() {
@@ -59,7 +63,7 @@ public class BillServiceImpl implements BillService {
 //                todo:  for dynamically receive and download in front end as ByteResourceArray
                 byte[] generated = PdfUtils.generatePurchaseHistoryPDF(billResponses, true);
                 if (generated.length == 0) {
-                    return ResponseEntity.ok(new BaseResponse<>(null, HttpStatus.OK.value(), "Pdf not generated", false));
+                    return ResponseEntity.ok(responseMessage.setFailureResponse("Pdf not generated"));
                 }
                 else {
                     ByteArrayResource resource = new ByteArrayResource(generated);
@@ -71,7 +75,7 @@ public class BillServiceImpl implements BillService {
 //                return ResponseEntity.ok(new BaseResponse<>("Generated", HttpStatus.OK.value(), null, generated));
             }
         } catch (Exception exception) {
-            return ResponseEntity.ok(new BaseResponse<>(null, HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), false));
+            return ResponseEntity.ok(responseMessage.setFailureResponse("Pdf bill cannot be generated", exception));
         }
     }
     private synchronized Optional<OrderHistory> getOrderHistoryByEmail(String email){

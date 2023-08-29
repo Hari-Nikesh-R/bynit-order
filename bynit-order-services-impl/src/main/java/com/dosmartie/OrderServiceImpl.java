@@ -2,6 +2,7 @@ package com.dosmartie;
 
 
 import com.dosmartie.helper.PdfUtils;
+import com.dosmartie.helper.ResponseMessage;
 import com.dosmartie.request.EmailRequest;
 import com.dosmartie.request.OrderRequest;
 import com.dosmartie.response.BaseResponse;
@@ -12,7 +13,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
@@ -29,13 +29,17 @@ public class OrderServiceImpl implements OrderService {
     private static final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
     @Autowired
     private OrderHistoryRepository orderHistoryRepository;
-
     @Autowired
     private MailService mailService;
     @Autowired
     private ObjectMapper mapper;
+
     @Autowired
-    private MailServiceFeign mailServiceFeign;
+    private ResponseMessage<OrderResponse> responseMessage;
+
+    @Autowired
+    private ResponseMessage<List<OrderResponse>> responseMessageList;
+
 
     @KafkaListener(topics = "mytopic", groupId = "mygroup")
     public void createOrder(String orderRequest) {
@@ -62,22 +66,22 @@ public class OrderServiceImpl implements OrderService {
             return optionalOrderHistory.map(orderHistory -> {
                         OrderResponse orderResponse = new OrderResponse();
                         BeanUtils.copyProperties(orderHistory, orderResponse);
-                        return ResponseEntity.ok(new BaseResponse<>(orderResponse, HttpStatus.OK.value(), null, true));
+                        return ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched result", orderResponse));
                     })
-                    .orElseGet(() -> ResponseEntity.ok(new BaseResponse<>(null, HttpStatus.NO_CONTENT.value(), "NO ORDER FOUND", false)));
+                    .orElseGet(() -> ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND")));
         } catch (Exception exception) {
             log.error(exception.fillInStackTrace().getLocalizedMessage());
-            return ResponseEntity.ok(new BaseResponse<>(null, HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), false));
+            return ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND", exception));
         }
     }
 
     @Override
     public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder() {
         try {
-            return ResponseEntity.ok(new BaseResponse<>(mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
-            }), HttpStatus.OK.value(), null, true));
+            return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched results", mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
+            })));
         } catch (Exception exception) {
-            return ResponseEntity.ok(new BaseResponse<>(null, HttpStatus.INTERNAL_SERVER_ERROR.value(), exception.getMessage(), false));
+            return ResponseEntity.ok(responseMessageList.setFailureResponse("Unable to fetch result", exception));
         }
     }
 

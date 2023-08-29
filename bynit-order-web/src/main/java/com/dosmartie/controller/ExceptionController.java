@@ -20,12 +20,12 @@ public class ExceptionController {
         exception.getFieldErrors().forEach((fieldError -> {
             errorMessage.set(fieldError.getDefaultMessage());
         }));
-        return new BaseResponse<>(null, HttpStatus.BAD_REQUEST.value(), errorMessage.get(), false);
+        return new BaseResponse<>("Invalid request", errorMessage.get(), false, HttpStatus.BAD_REQUEST.value(), null);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public BaseResponse<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException exception) throws IOException {
-        return new BaseResponse<>(null, HttpStatus.BAD_REQUEST.value(), "Invalid request", false);
+        return new BaseResponse<>(null, "Invalid request", false, HttpStatus.BAD_REQUEST.value(), null);
     }
 }
