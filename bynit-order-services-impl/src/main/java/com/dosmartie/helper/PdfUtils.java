@@ -114,7 +114,9 @@ public class PdfUtils {
                 }
             }
             billResponse.getAvailableProduct().forEach(productResponse -> {
-                table.addCell(billResponse.getOrderedCustomerDetail().getName());
+                if (column != 6) {
+                    table.addCell(billResponse.getOrderedCustomerDetail().getName());
+                }
                 table.addCell(productResponse.getName());
                 table.addCell(productResponse.getBrand());
                 table.addCell(productResponse.getQuantity().toString());

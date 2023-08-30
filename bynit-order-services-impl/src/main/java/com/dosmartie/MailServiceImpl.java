@@ -1,6 +1,5 @@
 package com.dosmartie;
 
-import com.dosmartie.helper.ResponseMessage;
 import com.dosmartie.request.EmailRequest;
 import com.dosmartie.request.EmailTemplate;
 import com.dosmartie.request.MailConfiguration;
@@ -40,7 +39,7 @@ public class MailServiceImpl implements MailService {
             message.setFrom(new InternetAddress(mailConfiguration.getUsername()));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(mailBody.getRecipient()));
             message.setSubject(mailBody.getSubject());
-            message.setContent(attachPdfToMail(invoiceEmailTemplate(mailBody.getRecipient()), filename));
+            message.setContent(attachPdfToMail(invoiceEmailTemplate(mailBody.getName()), filename));
             message.saveChanges();
             Transport.send(message);
             log.info("Mail sent successfully");
@@ -148,7 +147,7 @@ public class MailServiceImpl implements MailService {
                 "        <p>Once again, thank you for choosing us.</p>\n" +
                 "        <p>Find your Invoice pdf of your purchase below</p>\n" +
                 "        <p>Best regards,</p>\n" +
-                "        <p>Your [Blibli India] Team</p>\n" +
+                "        <p>Your [Bynit Fashion] Team</p>\n" +
                 "    </div>\n" +
                 "</body>\n" +
                 "</html>";

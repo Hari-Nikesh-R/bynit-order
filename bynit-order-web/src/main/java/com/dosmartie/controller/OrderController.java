@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import static com.dosmartie.helper.Constants.PARAM;
-import static com.dosmartie.helper.Urls.ALL;
-import static com.dosmartie.helper.Urls.ORDER;
+import static com.dosmartie.helper.Urls.*;
 
 
 @RestController

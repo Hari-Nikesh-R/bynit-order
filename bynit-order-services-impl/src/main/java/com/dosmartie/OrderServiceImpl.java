@@ -51,7 +51,7 @@ public class OrderServiceImpl implements OrderService {
             orderHistoryRepository.save(orderHistory);
             List<BillResponse> billResponseList = new ArrayList<>();
             billResponseList.add(mapper.convertValue(orderHistory, BillResponse.class));
-            EmailRequest emailRequest = constructEmailRequest(PdfUtils.generatePurchaseHistoryPDF(billResponseList, false), orderHistory.getEmail());
+            EmailRequest emailRequest = constructEmailRequest(PdfUtils.generatePurchaseHistoryPDF(billResponseList, false), orderHistory.getEmail(), orderHistory.getOrderedCustomerDetail().getName());
             mailService.sendEmail(emailRequest);
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -104,8 +104,9 @@ public class OrderServiceImpl implements OrderService {
         return calendar.get(Calendar.DATE) + "-" + calendar.get(Calendar.MONTH) + "-" + calendar.get(Calendar.YEAR);
     }
 
-    private EmailRequest constructEmailRequest(byte[] byteArrayResource, String email) {
+    private EmailRequest constructEmailRequest(byte[] byteArrayResource, String email, String name) {
         EmailRequest emailRequest = new EmailRequest();
+        emailRequest.setName(name);
         emailRequest.setRecipient(email);
         emailRequest.setSubject("Invoice for Purchase");
         emailRequest.setPdfData(byteArrayResource);

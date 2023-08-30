@@ -21,6 +21,7 @@ public class OrderHistory {
     private OrderStatus orderStatus;
     private double totalOrder;
     private Date createdDate;
+    private boolean isRated;
     private String email;
     @CreatedBy
     private CustomerDetailRequest orderedCustomerDetail;

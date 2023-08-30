@@ -11,5 +11,6 @@ import lombok.NoArgsConstructor;
 public class EmailRequest {
     private String recipient;
     private String subject;
+    private String name;
     private byte[] pdfData;
 }
