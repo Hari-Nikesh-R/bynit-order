@@ -12,4 +12,5 @@ public class CustomerDetailRequest {
     @NotNull(message = "Name cannot be null")
     private String name;
     private String phoneNumber;
+    private AddressRequest address;
 }

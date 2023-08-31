@@ -7,5 +7,6 @@ public final class Constants {
     public static final String EMAIL = "email";
     public static final String REQUESTED_DATE = "requestDate";
     public static final String PARAM = "emailOrOrderID";
+    public static final String AUTH_ID = "authId";
 
 }

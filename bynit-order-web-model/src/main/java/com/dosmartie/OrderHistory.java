@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Data
 @Document(collection = "order_history")
@@ -21,7 +22,6 @@ public class OrderHistory {
     private OrderStatus orderStatus;
     private double totalOrder;
     private Date createdDate;
-    private boolean isRated;
     private String email;
     @CreatedBy
     private CustomerDetailRequest orderedCustomerDetail;

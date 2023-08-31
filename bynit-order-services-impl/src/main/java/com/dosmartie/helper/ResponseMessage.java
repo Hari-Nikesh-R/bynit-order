@@ -9,6 +9,9 @@ public class ResponseMessage<T> {
     public synchronized BaseResponse<T> setSuccessResponse(String result, T data) {
         return new BaseResponse<>(result, null, true, HttpStatus.OK.value(), data);
     }
+    public synchronized BaseResponse<T> setUnauthorizedResponse() {
+        return new BaseResponse<>(null,"Access denied", false, HttpStatus.FORBIDDEN.value(), null);
+    }
 
     public synchronized BaseResponse<T> setFailureResponse(String result, Exception exception) {
         return new BaseResponse<>(result, exception.getMessage(), false, HttpStatus.INTERNAL_SERVER_ERROR.value(), null);

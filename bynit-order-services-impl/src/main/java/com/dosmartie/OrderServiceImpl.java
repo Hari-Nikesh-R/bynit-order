@@ -5,9 +5,9 @@ import com.dosmartie.helper.PdfUtils;
 import com.dosmartie.helper.ResponseMessage;
 import com.dosmartie.request.EmailRequest;
 import com.dosmartie.request.OrderRequest;
-import com.dosmartie.response.BaseResponse;
-import com.dosmartie.response.BillResponse;
-import com.dosmartie.response.OrderResponse;
+import com.dosmartie.request.RateRequest;
+import com.dosmartie.response.*;
+import com.dosmartie.utils.EncryptionUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -27,18 +27,26 @@ import java.util.*;
 public class OrderServiceImpl implements OrderService {
 
     private static final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
-    @Autowired
-    private OrderHistoryRepository orderHistoryRepository;
-    @Autowired
-    private MailService mailService;
-    @Autowired
-    private ObjectMapper mapper;
+    private final OrderHistoryRepository orderHistoryRepository;
 
-    @Autowired
-    private ResponseMessage<OrderResponse> responseMessage;
+    private final MailService mailService;
 
-    @Autowired
-    private ResponseMessage<List<OrderResponse>> responseMessageList;
+    private final ObjectMapper mapper;
+
+    private final ResponseMessage<OrderResponse> responseMessage;
+
+    private final ResponseMessage<List<OrderResponse>> responseMessageList;
+
+    private final EncryptionUtils encryptionUtils;
+
+    public OrderServiceImpl(OrderHistoryRepository orderHistoryRepository, MailService mailService, ObjectMapper mapper, ResponseMessage<OrderResponse> responseMessage, ResponseMessage<List<OrderResponse>> responseMessageList, EncryptionUtils encryptionUtils) {
+        this.orderHistoryRepository = orderHistoryRepository;
+        this.mailService = mailService;
+        this.mapper = mapper;
+        this.responseMessage = responseMessage;
+        this.responseMessageList = responseMessageList;
+        this.encryptionUtils = encryptionUtils;
+    }
 
 
     @KafkaListener(topics = "mytopic", groupId = "mygroup")
@@ -52,7 +60,7 @@ public class OrderServiceImpl implements OrderService {
             List<BillResponse> billResponseList = new ArrayList<>();
             billResponseList.add(mapper.convertValue(orderHistory, BillResponse.class));
             EmailRequest emailRequest = constructEmailRequest(PdfUtils.generatePurchaseHistoryPDF(billResponseList, false), orderHistory.getEmail(), orderHistory.getOrderedCustomerDetail().getName());
-            mailService.sendEmail(emailRequest);
+            //mailService.sendEmail(emailRequest);
         } catch (Exception exception) {
             exception.printStackTrace();
             log.error(exception.fillInStackTrace().getLocalizedMessage());
@@ -60,15 +68,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(String param) {
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(String param, String authId) {
         try {
-            Optional<OrderHistory> optionalOrderHistory = getOrderHistory(param);
-            return optionalOrderHistory.map(orderHistory -> {
-                        OrderResponse orderResponse = new OrderResponse();
-                        BeanUtils.copyProperties(orderHistory, orderResponse);
-                        return ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched result", orderResponse));
-                    })
-                    .orElseGet(() -> ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND")));
+            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
+                Optional<OrderHistory> optionalOrderHistory = getOrderHistory(param);
+                return optionalOrderHistory.map(orderHistory -> {
+                            OrderResponse orderResponse = new OrderResponse();
+                            BeanUtils.copyProperties(orderHistory, orderResponse);
+                            return ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched result", orderResponse));
+                        })
+                        .orElseGet(() -> ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND")));
+            }
+            else {
+                return ResponseEntity.ok(responseMessage.setUnauthorizedResponse());
+            }
         } catch (Exception exception) {
             log.error(exception.fillInStackTrace().getLocalizedMessage());
             return ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND", exception));
@@ -76,14 +89,46 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder() {
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder(String authId) {
         try {
-            return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched results", mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
-            })));
+            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
+                return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched results", mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
+                })));
+            }
+            else {
+                return ResponseEntity.ok(responseMessageList.setUnauthorizedResponse());
+            }
         } catch (Exception exception) {
             return ResponseEntity.ok(responseMessageList.setFailureResponse("Unable to fetch result", exception));
         }
     }
+
+    @Override
+    public synchronized Map<String, ProductResponse> getAllUnratedProducts(String orderId, List<RateRequest> requests) {
+        Map<String, ProductResponse> unratedProduct = new HashMap<>();
+        return orderHistoryRepository.findByOrderId(orderId).map(orderHistory -> {
+            orderHistory.getAvailableProduct().forEach(productResponse -> {
+                if (!productResponse.isRated()) {
+                    unratedProduct.put(productResponse.getSku(), productResponse);
+                    if (requests.size() > 0) {
+                        requests.forEach(rateRequest -> {
+                            if (productResponse.getSku().equals(rateRequest.getItemSku())) {
+                                productResponse.setRated(true);
+                                productResponse.setRatingBasedOnOrder(rateRequest.getRate());
+                                productResponse.setReviews(new HashMap<>(){{put(orderHistory.getOrderedCustomerDetail().getName(), rateRequest.getReview());}});
+                            }
+                        });
+                    }
+                }
+            });
+            if (requests.size() > 0) {
+                orderHistory.setAvailableProduct(orderHistory.getAvailableProduct());
+                orderHistoryRepository.save(orderHistory);
+            }
+            return unratedProduct;
+        }).orElseGet(() -> unratedProduct);
+    }
+
 
     private synchronized Optional<OrderHistory> getOrderHistory(String param) {
         if (param.matches("[a-z0-9]+@[a-z]+\\.[a-z]{2,3}")) {
