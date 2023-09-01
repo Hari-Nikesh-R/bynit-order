@@ -12,7 +12,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Repository
 public interface OrderHistoryRepository extends MongoRepository<OrderHistory, String> {
-    Optional<OrderHistory> findByEmail(String email);
-    Optional<OrderHistory> findByOrderId(String orderId);
+    List<OrderHistory> findByOrderIdOrEmail(String orderId, String email);
+    Optional<OrderHistory> findByOrderIdAndEmail(String orderId, String email);
+
     List<OrderHistory> findAllByCreatedDate(Date requestDate);
 }

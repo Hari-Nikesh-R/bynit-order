@@ -30,9 +30,9 @@ public class BillServiceImpl implements BillService {
     private ResponseMessage<BillResponse> responseMessage;
 
     @Override
-    public BaseResponse<BillResponse> generateBill(String email, HttpServletResponse response) {
+    public BaseResponse<BillResponse> generateBill(String orderId, String email, HttpServletResponse response) {
         try {
-            Optional<OrderHistory> optionalOrderHistory = getOrderHistoryByEmail(email);
+            Optional<OrderHistory> optionalOrderHistory = retrieveOrderByOrderId(orderId, email);
             return optionalOrderHistory.map(orderHistory -> {
                 String fileName = calendar.get(Calendar.DATE) + "-" + calendar.get(Calendar.MONTH) + "-" + calendar.get(Calendar.YEAR);
                 response.setContentType("application/pdf");
@@ -78,8 +78,8 @@ public class BillServiceImpl implements BillService {
             return ResponseEntity.ok(responseMessage.setFailureResponse("Pdf bill cannot be generated", exception));
         }
     }
-    private synchronized Optional<OrderHistory> getOrderHistoryByEmail(String email){
-        return orderHistoryRepository.findByEmail(email);
+    private synchronized Optional<OrderHistory> retrieveOrderByOrderId(String orderId, String email) {
+        return orderHistoryRepository.findByOrderIdAndEmail(orderId, email);
     }
     private Date parseStringToDate(String requestDate) throws ParseException {
         return new SimpleDateFormat("dd-MM-yyyy").parse(requestDate);

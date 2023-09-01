@@ -6,13 +6,15 @@ import com.dosmartie.helper.ResponseMessage;
 import com.dosmartie.request.EmailRequest;
 import com.dosmartie.request.OrderRequest;
 import com.dosmartie.request.RateRequest;
-import com.dosmartie.response.*;
+import com.dosmartie.response.BaseResponse;
+import com.dosmartie.response.BillResponse;
+import com.dosmartie.response.OrderResponse;
+import com.dosmartie.response.ProductResponse;
 import com.dosmartie.utils.EncryptionUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
@@ -68,21 +70,38 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(String param, String authId) {
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getOrder(String param, String authId) {
         try {
             if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
-                Optional<OrderHistory> optionalOrderHistory = getOrderHistory(param);
-                return optionalOrderHistory.map(orderHistory -> {
-                            OrderResponse orderResponse = new OrderResponse();
-                            BeanUtils.copyProperties(orderHistory, orderResponse);
-                            return ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched result", orderResponse));
-                        })
+                List<OrderHistory> optionalOrderHistory = getOrderHistory(param);
+                if (optionalOrderHistory.size() != 0) {
+                    return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched result", mapper.convertValue(optionalOrderHistory, new TypeReference<>() {
+                    })));
+                } else {
+                    return ResponseEntity.ok(responseMessageList.setFailureResponse("NO ORDER FOUND"));
+                }
+            } else {
+                return ResponseEntity.ok(responseMessageList.setUnauthorizedResponse());
+            }
+        } catch (Exception exception) {
+            log.error(exception.fillInStackTrace().getLocalizedMessage());
+            return ResponseEntity.ok(responseMessageList.setFailureResponse("NO ORDER FOUND", exception));
+        }
+    }
+
+    @Override
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrderByOrderId(String orderId, String authId, String email) {
+        try {
+            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
+                return retrieveOrderByOrderId(orderId, email)
+                        .map(orderHistory -> ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched resut", mapper.convertValue(orderHistory, OrderResponse.class))))
                         .orElseGet(() -> ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND")));
             }
             else {
                 return ResponseEntity.ok(responseMessage.setUnauthorizedResponse());
             }
-        } catch (Exception exception) {
+        }
+        catch (Exception exception) {
             log.error(exception.fillInStackTrace().getLocalizedMessage());
             return ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND", exception));
         }
@@ -94,8 +113,7 @@ public class OrderServiceImpl implements OrderService {
             if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
                 return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched results", mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
                 })));
-            }
-            else {
+            } else {
                 return ResponseEntity.ok(responseMessageList.setUnauthorizedResponse());
             }
         } catch (Exception exception) {
@@ -104,9 +122,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public synchronized Map<String, ProductResponse> getAllUnratedProducts(String orderId, List<RateRequest> requests) {
+    public synchronized Map<String, ProductResponse> getAllUnratedProducts(String orderId, List<RateRequest> requests, String email) {
         Map<String, ProductResponse> unratedProduct = new HashMap<>();
-        return orderHistoryRepository.findByOrderId(orderId).map(orderHistory -> {
+        return retrieveOrderByOrderId(orderId, email).map(orderHistory -> {
             orderHistory.getAvailableProduct().forEach(productResponse -> {
                 if (!productResponse.isRated()) {
                     unratedProduct.put(productResponse.getSku(), productResponse);
@@ -115,7 +133,9 @@ public class OrderServiceImpl implements OrderService {
                             if (productResponse.getSku().equals(rateRequest.getItemSku())) {
                                 productResponse.setRated(true);
                                 productResponse.setRatingBasedOnOrder(rateRequest.getRate());
-                                productResponse.setReviews(new HashMap<>(){{put(orderHistory.getOrderedCustomerDetail().getName(), rateRequest.getReview());}});
+                                productResponse.setReviews(new HashMap<>() {{
+                                    put(orderHistory.getOrderedCustomerDetail().getName(), rateRequest.getReview());
+                                }});
                             }
                         });
                     }
@@ -130,12 +150,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-    private synchronized Optional<OrderHistory> getOrderHistory(String param) {
-        if (param.matches("[a-z0-9]+@[a-z]+\\.[a-z]{2,3}")) {
-            return orderHistoryRepository.findByEmail(param);
-        } else {
-            return orderHistoryRepository.findByOrderId(param);
-        }
+    private synchronized List<OrderHistory> getOrderHistory(String param) {
+        return orderHistoryRepository.findByOrderIdOrEmail(param, param);
+    }
+
+    private synchronized Optional<OrderHistory> retrieveOrderByOrderId(String orderId, String email) {
+        return orderHistoryRepository.findByOrderIdAndEmail(orderId, email);
     }
 
 

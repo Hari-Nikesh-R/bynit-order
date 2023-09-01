@@ -9,4 +9,5 @@ public final class Urls {
     public static final String BILL = "/bill";
     public static final String ORDER = "/order";
     public static final String ALL = "/all";
+    public static final String ADMIN_ALL = "/admin/all";
 }

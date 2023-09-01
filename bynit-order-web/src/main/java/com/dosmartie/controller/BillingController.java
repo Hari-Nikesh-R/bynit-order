@@ -22,8 +22,8 @@ public class BillingController {
     private BillService billService;
 
     @GetMapping(value = ORDER_ID_PARAM)
-    public BaseResponse<BillResponse> getBill(@PathVariable(EMAIL) String email, HttpServletResponse response) {
-        return billService.generateBill(email, response);
+    public BaseResponse<BillResponse> getBill(@PathVariable("orderId") String orderId, @RequestHeader(EMAIL) String email, HttpServletResponse response) {
+        return billService.generateBill(orderId, email, response);
     }
 
     @GetMapping

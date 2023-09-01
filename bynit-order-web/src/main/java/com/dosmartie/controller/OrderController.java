@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-import static com.dosmartie.helper.Constants.AUTH_ID;
-import static com.dosmartie.helper.Constants.PARAM;
+import static com.dosmartie.helper.Constants.*;
 import static com.dosmartie.helper.Urls.*;
 
 
@@ -25,19 +24,24 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    @GetMapping
-    public ResponseEntity<BaseResponse<OrderResponse>> getProductByEmail(@RequestParam(PARAM) String param, @RequestHeader(AUTH_ID) String authId) {
+    @GetMapping(value = ALL)
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getProductByEmail(@RequestParam(EMAIL) String param, @RequestHeader(AUTH_ID) String authId) {
         return orderService.getOrder(param, authId);
     }
 
-    @GetMapping(value = ALL)
+    @GetMapping
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(@RequestHeader("orderId") String orderId, @RequestHeader("email") String email, @RequestHeader(AUTH_ID) String authId) {
+        return orderService.getOrderByOrderId(orderId, authId, email);
+    }
+
+    @GetMapping(value = ADMIN_ALL)
     public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder(@RequestHeader(AUTH_ID) String authId) {
         return orderService.getAllOrder(authId);
     }
 
     @PutMapping(value = "/unrated")
-    public Map<String, ProductResponse> getUnratedProducts(@RequestParam("orderId") String orderId, @RequestBody List<RateRequest> requests) {
-        return orderService.getAllUnratedProducts(orderId, requests);
+    public Map<String, ProductResponse> getUnratedProducts(@RequestParam("orderId") String orderId, @RequestHeader("email") String email, @RequestBody List<RateRequest> requests) {
+        return orderService.getAllUnratedProducts(orderId, requests, email);
     }
 
 }
