@@ -72,8 +72,7 @@ public class BillServiceImpl implements BillService {
                             .contentType(MediaType.APPLICATION_PDF)
                             .body(resource);
                 }
-//                return ResponseEntity.ok(new BaseResponse<>("Generated", HttpStatus.OK.value(), null, generated));
-            }
+                }
         } catch (Exception exception) {
             return ResponseEntity.ok(responseMessage.setFailureResponse("Pdf bill cannot be generated", exception));
         }

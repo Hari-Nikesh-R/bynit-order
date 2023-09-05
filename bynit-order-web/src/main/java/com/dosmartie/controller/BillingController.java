@@ -17,15 +17,12 @@ import static com.dosmartie.helper.Urls.ORDER_ID_PARAM;
 @RestController
 @RequestMapping(value = BILL)
 public class BillingController {
-
     @Autowired
     private BillService billService;
-
     @GetMapping(value = ORDER_ID_PARAM)
     public BaseResponse<BillResponse> getBill(@PathVariable("orderId") String orderId, @RequestHeader(EMAIL) String email, HttpServletResponse response) {
         return billService.generateBill(orderId, email, response);
     }
-
     @GetMapping
     public ResponseEntity<?> getDailyPurchaseBillPdf(@RequestParam(REQUESTED_DATE) String requestDate, HttpServletResponse response) {
         return billService.generateDailyPurchaseBillPdf(requestDate, response);

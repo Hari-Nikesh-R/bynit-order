@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 public interface OrderService {
-    ResponseEntity<BaseResponse<List<OrderResponse>>> getOrder(String param, String authId);
-    ResponseEntity<BaseResponse<OrderResponse>> getOrderByOrderId(String orderId, String authId, String email);
+    ResponseEntity<BaseResponse<List<OrderResponse>>> getOrder(String param);
+    ResponseEntity<BaseResponse<OrderResponse>> getOrderByOrderId(String orderId, String email);
 
-    ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder(String authId);
+    ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder();
     Map<String, ProductResponse> getAllUnratedProducts(String orderId, List<RateRequest> requests, String email);
 }
