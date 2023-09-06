@@ -10,4 +10,5 @@ public final class Urls {
     public static final String ORDER = "/order";
     public static final String ALL = "/all";
     public static final String ADMIN_ALL = "/admin/all";
+    public static final String UNRATED = "/unrated";
 }

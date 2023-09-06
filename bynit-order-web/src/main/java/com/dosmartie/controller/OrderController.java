@@ -25,21 +25,21 @@ public class OrderController {
     private OrderService orderService;
 
     @GetMapping(value = ALL)
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getProductByEmail(@RequestParam(EMAIL) String param, @RequestHeader(AUTH_ID) String authId) {
-        return orderService.getOrder(param, authId);
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getProductByEmail(@RequestParam(EMAIL) String param ) {
+        return orderService.getOrder(param);
     }
 
     @GetMapping
-    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(@RequestHeader("orderId") String orderId, @RequestHeader("email") String email, @RequestHeader(AUTH_ID) String authId) {
-        return orderService.getOrderByOrderId(orderId, authId, email);
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrder(@RequestHeader("orderId") String orderId, @RequestHeader("email") String email) {
+        return orderService.getOrderByOrderId(orderId, email);
     }
 
     @GetMapping(value = ADMIN_ALL)
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder(@RequestHeader(AUTH_ID) String authId) {
-        return orderService.getAllOrder(authId);
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder() {
+        return orderService.getAllOrder();
     }
 
-    @PutMapping(value = "/unrated")
+    @PutMapping(value = UNRATED)
     public Map<String, ProductResponse> getUnratedProducts(@RequestParam("orderId") String orderId, @RequestHeader("email") String email, @RequestBody List<RateRequest> requests) {
         return orderService.getAllUnratedProducts(orderId, requests, email);
     }

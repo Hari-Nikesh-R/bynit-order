@@ -10,7 +10,6 @@ import com.dosmartie.response.BaseResponse;
 import com.dosmartie.response.BillResponse;
 import com.dosmartie.response.OrderResponse;
 import com.dosmartie.response.ProductResponse;
-import com.dosmartie.utils.EncryptionUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -39,15 +38,12 @@ public class OrderServiceImpl implements OrderService {
 
     private final ResponseMessage<List<OrderResponse>> responseMessageList;
 
-    private final EncryptionUtils encryptionUtils;
-
-    public OrderServiceImpl(OrderHistoryRepository orderHistoryRepository, MailService mailService, ObjectMapper mapper, ResponseMessage<OrderResponse> responseMessage, ResponseMessage<List<OrderResponse>> responseMessageList, EncryptionUtils encryptionUtils) {
+    public OrderServiceImpl(OrderHistoryRepository orderHistoryRepository, MailService mailService, ObjectMapper mapper, ResponseMessage<OrderResponse> responseMessage, ResponseMessage<List<OrderResponse>> responseMessageList) {
         this.orderHistoryRepository = orderHistoryRepository;
         this.mailService = mailService;
         this.mapper = mapper;
         this.responseMessage = responseMessage;
         this.responseMessageList = responseMessageList;
-        this.encryptionUtils = encryptionUtils;
     }
 
 
@@ -70,9 +66,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getOrder(String param, String authId) {
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getOrder(String param) {
         try {
-            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
                 List<OrderHistory> optionalOrderHistory = getOrderHistory(param);
                 if (optionalOrderHistory.size() != 0) {
                     return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched result", mapper.convertValue(optionalOrderHistory, new TypeReference<>() {
@@ -80,9 +75,6 @@ public class OrderServiceImpl implements OrderService {
                 } else {
                     return ResponseEntity.ok(responseMessageList.setFailureResponse("NO ORDER FOUND"));
                 }
-            } else {
-                return ResponseEntity.ok(responseMessageList.setUnauthorizedResponse());
-            }
         } catch (Exception exception) {
             log.error(exception.fillInStackTrace().getLocalizedMessage());
             return ResponseEntity.ok(responseMessageList.setFailureResponse("NO ORDER FOUND", exception));
@@ -90,17 +82,12 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<OrderResponse>> getOrderByOrderId(String orderId, String authId, String email) {
+    public ResponseEntity<BaseResponse<OrderResponse>> getOrderByOrderId(String orderId , String email) {
         try {
-            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
                 return retrieveOrderByOrderId(orderId, email)
                         .map(orderHistory -> ResponseEntity.ok(responseMessage.setSuccessResponse("Fetched resut", mapper.convertValue(orderHistory, OrderResponse.class))))
                         .orElseGet(() -> ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND")));
             }
-            else {
-                return ResponseEntity.ok(responseMessage.setUnauthorizedResponse());
-            }
-        }
         catch (Exception exception) {
             log.error(exception.fillInStackTrace().getLocalizedMessage());
             return ResponseEntity.ok(responseMessage.setFailureResponse("NO ORDER FOUND", exception));
@@ -108,14 +95,11 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder(String authId) {
+    public ResponseEntity<BaseResponse<List<OrderResponse>>> getAllOrder() {
         try {
-            if (encryptionUtils.decryptAuthIdAndValidateRequest(authId)) {
                 return ResponseEntity.ok(responseMessageList.setSuccessResponse("Fetched results", mapper.convertValue(orderHistoryRepository.findAll(), new TypeReference<>() {
                 })));
-            } else {
-                return ResponseEntity.ok(responseMessageList.setUnauthorizedResponse());
-            }
+
         } catch (Exception exception) {
             return ResponseEntity.ok(responseMessageList.setFailureResponse("Unable to fetch result", exception));
         }
